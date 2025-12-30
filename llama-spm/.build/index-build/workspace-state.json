@@ -1,0 +1,31 @@
+{
+  "object" : {
+    "artifacts" : [
+      {
+        "kind" : {
+          "xcframework" : {
+
+          }
+        },
+        "packageRef" : {
+          "identity" : "llama-spm",
+          "kind" : "root",
+          "location" : "/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm",
+          "name" : "llama-spm"
+        },
+        "path" : "/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/Frameworks/llama.xcframework",
+        "source" : {
+          "type" : "local"
+        },
+        "targetName" : "llama"
+      }
+    ],
+    "dependencies" : [
+
+    ],
+    "prebuilts" : [
+
+    ]
+  },
+  "version" : 7
+}

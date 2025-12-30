@@ -1,0 +1,67 @@
+{
+  "object" : {
+    "artifacts" : [
+      {
+        "kind" : {
+          "xcframework" : {
+
+          }
+        },
+        "packageRef" : {
+          "identity" : "llama-spm",
+          "kind" : "root",
+          "location" : "/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm",
+          "name" : "llama-spm"
+        },
+        "path" : "/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/Frameworks/llama.xcframework",
+        "source" : {
+          "type" : "local"
+        },
+        "targetName" : "llama_bin"
+      },
+      {
+        "kind" : {
+          "xcframework" : {
+
+          }
+        },
+        "packageRef" : {
+          "identity" : "llama-spm",
+          "kind" : "root",
+          "location" : "/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm",
+          "name" : "llama-spm"
+        },
+        "path" : "/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/Frameworks/mtmd.xcframework",
+        "source" : {
+          "type" : "local"
+        },
+        "targetName" : "mtmd_bin"
+      },
+      {
+        "kind" : {
+          "xcframework" : {
+
+          }
+        },
+        "packageRef" : {
+          "identity" : "llama-spm",
+          "kind" : "root",
+          "location" : "/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm",
+          "name" : "llama-spm"
+        },
+        "path" : "/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/Frameworks/ggml.xcframework",
+        "source" : {
+          "type" : "local"
+        },
+        "targetName" : "ggml_bin"
+      }
+    ],
+    "dependencies" : [
+
+    ],
+    "prebuilts" : [
+
+    ]
+  },
+  "version" : 7
+}

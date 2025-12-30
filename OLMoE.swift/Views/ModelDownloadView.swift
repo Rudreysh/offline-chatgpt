@@ -24,6 +24,7 @@ class BackgroundDownloadManager: NSObject, ObservableObject, URLSessionDownloadD
     @Published var isModelReady = false
     @Published var downloadedSize: Int64 = 0
     @Published var totalSize: Int64 = 0
+    @Published var currentModelID: String?
 
     private var networkMonitor: NWPathMonitor?
     private var backgroundSession: URLSession!
@@ -32,6 +33,8 @@ class BackgroundDownloadManager: NSObject, ObservableObject, URLSessionDownloadD
     private var hasCheckedDiskSpace = false
     private let updateInterval: TimeInterval = 0.5 // Update UI every 0.5 seconds
     private var lastDispatchedBytesWritten: Int64 = 0
+    private var artifacts: [(url: URL, destination: URL)] = []
+    private var currentArtifactIndex = 0
 
     private override init() {
         super.init()
@@ -59,6 +62,7 @@ class BackgroundDownloadManager: NSObject, ObservableObject, URLSessionDownloadD
                     self.hasCheckedDiskSpace = false
                     self.isModelReady = false
                     self.lastDispatchedBytesWritten = 0
+                    self.currentModelID = nil
                     self.downloadTask?.cancel()
                 }
             }
@@ -69,20 +73,47 @@ class BackgroundDownloadManager: NSObject, ObservableObject, URLSessionDownloadD
     }
 
     /// Starts the download process.
-    func startDownload() {
+    func startDownload(for model: ModelSpec) {
         if networkMonitor?.currentPath.status == .unsatisfied {
             return
         }
 
-        guard let url = URL(string: AppConstants.Model.downloadURL) else { return }
+        let artifacts = buildArtifacts(for: model)
+        guard !artifacts.isEmpty else { return }
 
         isDownloading = true
         downloadError = nil
         downloadedSize = 0
         totalSize = 0
         self.lastDispatchedBytesWritten = 0
+        self.currentModelID = model.id
+        self.artifacts = artifacts
+        self.currentArtifactIndex = 0
+        startNextArtifactDownload()
+    }
 
-        downloadTask = backgroundSession.downloadTask(with: url)
+    private func buildArtifacts(for model: ModelSpec) -> [(url: URL, destination: URL)] {
+        var output: [(url: URL, destination: URL)] = []
+        let directory = model.localDirectory
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        output.append((model.downloadURL, model.localModelURL))
+        if model.isMultimodal, let projectorURL = model.projectorURL, let projectorPath = model.localProjectorURL {
+            output.append((projectorURL, projectorPath))
+        }
+        return output
+    }
+
+    private func startNextArtifactDownload() {
+        guard currentArtifactIndex < artifacts.count else {
+            DispatchQueue.main.async {
+                self.isDownloading = false
+                self.isModelReady = true
+                self.currentModelID = nil
+            }
+            return
+        }
+        let artifact = artifacts[currentArtifactIndex]
+        downloadTask = backgroundSession.downloadTask(with: artifact.url)
         downloadTask?.resume()
     }
 
@@ -92,7 +123,8 @@ class BackgroundDownloadManager: NSObject, ObservableObject, URLSessionDownloadD
     ///   - downloadTask: The download task that completed.
     ///   - location: The temporary location of the downloaded file.
     func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
-        let destination = Bot.modelFileURL
+        guard currentArtifactIndex < artifacts.count else { return }
+        let destination = artifacts[currentArtifactIndex].destination
 
         do {
             if FileManager.default.fileExists(atPath: destination.path) {
@@ -100,8 +132,8 @@ class BackgroundDownloadManager: NSObject, ObservableObject, URLSessionDownloadD
             }
             try FileManager.default.moveItem(at: location, to: destination)
             DispatchQueue.main.async {
-                self.isModelReady = true
-                self.isDownloading = false
+                self.currentArtifactIndex += 1
+                self.startNextArtifactDownload()
             }
         } catch {
             DispatchQueue.main.async {
@@ -123,6 +155,7 @@ class BackgroundDownloadManager: NSObject, ObservableObject, URLSessionDownloadD
                     self.downloadError = "Download failed: \(error.localizedDescription)"
                 }
                 self.isDownloading = false
+                self.currentModelID = nil
                 self.hasCheckedDiskSpace = false
             }
         }
@@ -154,7 +187,9 @@ class BackgroundDownloadManager: NSObject, ObservableObject, URLSessionDownloadD
                 guard totalBytesWritten > self.lastDispatchedBytesWritten else { return }
                 self.lastDispatchedBytesWritten = totalBytesWritten
 
-                self.downloadProgress = Float(totalBytesWritten) / Float(totalBytesExpectedToWrite)
+                let perFileProgress = Float(totalBytesWritten) / Float(totalBytesExpectedToWrite)
+                let overallProgress = (Float(self.currentArtifactIndex) + perFileProgress) / Float(max(self.artifacts.count, 1))
+                self.downloadProgress = overallProgress
                 self.downloadedSize = totalBytesWritten
                 self.totalSize = totalBytesExpectedToWrite
                 self.lastUpdateTime = currentTime
@@ -163,13 +198,23 @@ class BackgroundDownloadManager: NSObject, ObservableObject, URLSessionDownloadD
     }
 
     /// Deletes the downloaded model file, marking it as not ready.
-    func flushModel() {
+    func flushModel(_ model: ModelSpec) {
         do {
-            try FileManager.default.removeItem(at: Bot.modelFileURL)
+            if FileManager.default.fileExists(atPath: model.localDirectory.path) {
+                try FileManager.default.removeItem(at: model.localDirectory)
+            }
             isModelReady = false
         } catch {
             downloadError = "Failed to flush model: \(error.localizedDescription)"
         }
+    }
+
+    func cancelDownload() {
+        downloadTask?.cancel()
+        isDownloading = false
+        currentArtifactIndex = 0
+        artifacts = []
+        currentModelID = nil
     }
 
     /// Checks if there is enough disk space available for the required space.
@@ -192,106 +237,242 @@ class BackgroundDownloadManager: NSObject, ObservableObject, URLSessionDownloadD
 /// A view that displays the model download progress and status.
 struct ModelDownloadView: View {
     @StateObject private var downloadManager = BackgroundDownloadManager.shared
-    @State private var showDownloadConfirmation = false
+    @StateObject private var modelStore = ModelStore.shared
+    var onSelectModel: ((ModelSpec) -> Void)? = nil
+    @State private var showCustomModelSheet = false
 
     public var body: some View {
         ZStack {
             Color("BackgroundColor")
                 .edgesIgnoringSafeArea(.all)
 
-            VStack(spacing: 40) {
-                if downloadManager.isModelReady {
-                    Text("Model is ready to use!")
+            ScrollView {
+                VStack(spacing: 24) {
+                    Text("Models")
+                        .font(.telegraf(.medium, size: 32))
                         .foregroundColor(Color("TextColor"))
-                        .font(.title())
-                    Button("Flush Model", action: downloadManager.flushModel)
-                        .buttonStyle(.PrimaryButton)
-                } else if downloadManager.isDownloading {
-                    ProgressView("Downloading...", value: downloadManager.downloadProgress, total: 1.0)
-                        .progressViewStyle(LinearProgressViewStyle())
-                        .padding()
-                        .foregroundColor(Color("TextColor"))
-                        .font(.body())
-                    HStack {
-                        Text("\(Int(downloadManager.downloadProgress * 100))%")
-                            .foregroundColor(Color("TextColor"))
-                            .font(.body())
 
-                        Divider()
-                            .frame(height: 20)
-                            .background(Color("DividerTeal"))
-
-                        Text("\(formatSize(downloadManager.downloadedSize)) / \(formatSize(downloadManager.totalSize))")
-                            .foregroundColor(Color("TextColor"))
-                            .font(.body())
+                    Button("Add Custom Model") {
+                        showCustomModelSheet = true
                     }
-                } else {
-                    Text("Welcome")
-                        .font(.telegraf(.medium, size: 40))
-
-                    Text("Download Model Message")
-                        .multilineTextAlignment(.center)
-                        .font(.body(.regular))
-                        .padding([.bottom], 4)
-
-                    Button(action: { showDownloadConfirmation = true }) {
-                        Image("DownloadIcon")
-                    }
-                    .buttonStyle(.borderless)
                     .buttonStyle(.PrimaryButton)
-                    .sheet(isPresented: $showDownloadConfirmation) {
-                        SheetWrapper {
-                            HStack {
-                                Spacer()
-                                CloseButton(action: { showDownloadConfirmation = false })
-                            }
-                            Spacer()
-                            VStack(spacing: 20) {
-                                Text("Download Model")
-                                    .font(.title())
 
-                                Text("The model requires 4.21GB of storage space. Would you like to proceed with the download?")
-                                    .multilineTextAlignment(.center)
-                                    .font(.body())
-
-                                VStack(spacing: 12) {
-                                    Button {
-                                        showDownloadConfirmation = false
-                                        downloadManager.startDownload()
-                                    } label: {
-                                        HStack {
-                                            Image(systemName: "arrow.down.circle.fill")
-                                            Text("Start Download")
-                                        }
-                                    }
-                                    .buttonStyle(.PrimaryButton)
+                    ForEach(modelStore.models) { model in
+                        ModelRow(
+                            model: model,
+                            isSelected: modelStore.selectedModelID == model.id,
+                            isReady: modelStore.isReady(model),
+                            isDownloading: downloadManager.isDownloading && downloadManager.currentModelID == model.id,
+                            progress: downloadManager.downloadProgress,
+                            errorText: downloadManager.downloadError,
+                            onSelect: {
+                                modelStore.selectModel(model)
+                                if modelStore.isReady(model) {
+                                    onSelectModel?(model)
                                 }
-                            }
-                                .padding()
-                            Spacer()
-                        }
+                            },
+                            onDownload: { downloadManager.startDownload(for: model) },
+                            onDelete: { downloadManager.flushModel(model) },
+                            onCancel: { downloadManager.cancelDownload() }
+                        )
+                    }
+
+                    if let error = downloadManager.downloadError, downloadManager.currentModelID == nil {
+                        Text(error)
+                            .foregroundColor(.red)
+                            .font(.caption)
                     }
                 }
-
-                if let error = downloadManager.downloadError {
-                    Text(error)
-                        .foregroundColor(.red)
-                        .padding()
+                .padding()
+            }
+            .sheet(isPresented: $showCustomModelSheet) {
+                SheetWrapper {
+                    CustomModelSheet(isPresented: $showCustomModelSheet, modelStore: modelStore)
                 }
             }
-            .padding()
 
             Ai2LogoView(applyMacCatalystPadding: true)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
         }
-        .onAppear {
-            if FileManager.default.fileExists(atPath: Bot.modelFileURL.path) {
-                downloadManager.isModelReady = true
-            } else {
-                // Model file doesn't exist, make sure isModelReady is false
-                downloadManager.isModelReady = false
+    }
+}
+
+private struct ModelRow: View {
+    let model: ModelSpec
+    let isSelected: Bool
+    let isReady: Bool
+    let isDownloading: Bool
+    let progress: Float
+    let errorText: String?
+    let onSelect: () -> Void
+    let onDownload: () -> Void
+    let onDelete: () -> Void
+    let onCancel: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text(model.displayName)
+                    .font(.headline)
+                    .foregroundColor(Color("TextColor"))
+                if model.isMultimodal {
+                    Text("Vision")
+                        .font(.caption)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color("Surface"))
+                        .cornerRadius(12)
+                }
+                Spacer()
+                if isSelected {
+                    Text("Selected")
+                        .font(.caption)
+                        .foregroundColor(Color("LightGreen"))
+                }
+            }
+
+            Text(isReady ? (model.isMultimodal ? "Model + projector ready" : "Model ready") : (model.isMultimodal ? "Requires model + projector" : "Not downloaded"))
+                .font(.subheadline)
+                .foregroundColor(Color("TextColor").opacity(0.7))
+
+            if isDownloading {
+                ProgressView(value: progress, total: 1.0)
+                    .progressViewStyle(LinearProgressViewStyle())
+            }
+
+            HStack {
+                Button("Select", action: onSelect)
+                    .buttonStyle(.PrimaryButton)
+                    .disabled(!isReady)
+
+                Button("Download", action: onDownload)
+                    .buttonStyle(.SecondaryButton)
+                    .disabled(isDownloading)
+
+                if isDownloading {
+                    Button("Cancel", action: onCancel)
+                        .buttonStyle(.SecondaryButton)
+                } else if isReady {
+                    Button("Delete", action: onDelete)
+                        .buttonStyle(.SecondaryButton)
+                }
+            }
+
+            if let errorText, isDownloading {
+                Text(errorText)
+                    .font(.caption)
+                    .foregroundColor(.red)
             }
         }
+        .padding()
+        .background(Color("Surface"))
+        .cornerRadius(20)
+    }
+}
+
+private struct CustomModelSheet: View {
+    enum ModelKind: String, CaseIterable, Identifiable {
+        case text = "Text"
+        case vision = "Multimodal"
+
+        var id: String { rawValue }
+    }
+
+    @Binding var isPresented: Bool
+    @ObservedObject var modelStore: ModelStore
+    @State private var name = ""
+    @State private var ggufURL = ""
+    @State private var projectorURL = ""
+    @State private var modelKind: ModelKind = .text
+    @State private var errorMessage: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Add Custom Model")
+                .font(.telegraf(.medium, size: 24))
+                .foregroundColor(Color("TextColor"))
+
+            TextField("Model name", text: $name)
+                .textFieldStyle(.roundedBorder)
+
+            TextField("GGUF URL", text: $ggufURL)
+                .textFieldStyle(.roundedBorder)
+
+            Picker("Type", selection: $modelKind) {
+                ForEach(ModelKind.allCases) { kind in
+                    Text(kind.rawValue).tag(kind)
+                }
+            }
+            .pickerStyle(.segmented)
+
+            if modelKind == .vision {
+                TextField("MMProj URL", text: $projectorURL)
+                    .textFieldStyle(.roundedBorder)
+            }
+
+            if let errorMessage {
+                Text(errorMessage)
+                    .foregroundColor(.red)
+                    .font(.caption)
+            }
+
+            HStack {
+                Button("Cancel") {
+                    isPresented = false
+                }
+                .buttonStyle(.SecondaryButton)
+
+                Spacer()
+
+                Button("Save") {
+                    saveModel()
+                }
+                .buttonStyle(.PrimaryButton)
+            }
+        }
+        .padding()
+    }
+
+    private func saveModel() {
+        errorMessage = nil
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedGGUF = ggufURL.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedMMProj = projectorURL.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !trimmedName.isEmpty else {
+            errorMessage = "Name is required."
+            return
+        }
+        guard let gguf = URL(string: trimmedGGUF), gguf.scheme?.hasPrefix("http") == true else {
+            errorMessage = "GGUF URL must be http(s)."
+            return
+        }
+
+        var mmproj: URL?
+        if modelKind == .vision {
+            guard let mmprojURL = URL(string: trimmedMMProj), mmprojURL.scheme?.hasPrefix("http") == true else {
+                errorMessage = "MMProj URL must be http(s)."
+                return
+            }
+            mmproj = mmprojURL
+        }
+
+        let modelId = "custom-\(UUID().uuidString)"
+        let filename = gguf.lastPathComponent.isEmpty ? "\(modelId).gguf" : gguf.lastPathComponent
+        let projectorFilename = mmproj?.lastPathComponent
+
+        let newModel = ModelSpec(
+            id: modelId,
+            displayName: trimmedName,
+            filename: filename,
+            downloadURL: gguf,
+            template: .chatML(),
+            isMultimodal: modelKind == .vision,
+            projectorFilename: projectorFilename,
+            projectorURL: mmproj
+        )
+        modelStore.addCustomModel(newModel)
+        isPresented = false
     }
 }
 

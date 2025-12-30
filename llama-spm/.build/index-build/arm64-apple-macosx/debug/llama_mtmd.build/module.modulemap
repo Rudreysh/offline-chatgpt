@@ -1,0 +1,4 @@
+module llama_mtmd {
+    umbrella header "/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/Sources/llama_mtmd/include/llama_mtmd.h"
+    export *
+}

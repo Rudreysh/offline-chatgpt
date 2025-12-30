@@ -1,0 +1,4 @@
+module llama_c {
+  umbrella header "llama_c.h"
+  export *
+}

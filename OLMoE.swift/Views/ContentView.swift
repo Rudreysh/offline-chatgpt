@@ -7,12 +7,16 @@
 
 
 import SwiftUI
+import UIKit
+import PhotosUI
+import UniformTypeIdentifiers
 import os
 
 class Bot: LLM {
-    static let modelFileURL = URL.modelsDirectory.appendingPathComponent(AppConstants.Model.filename).appendingPathExtension("gguf")
+    let modelSpec: ModelSpec
 
-    convenience init() {
+    init(model: ModelSpec) {
+        self.modelSpec = model
         let deviceName = UIDevice.current.model
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "MMMM d, yyyy"
@@ -24,12 +28,17 @@ class Bot: LLM {
 
         let systemPrompt = "You are OLMoE (Open Language Mixture of Expert), a small language model running on \(deviceName). You have been developed at the Allen Institute for AI (Ai2) in Seattle, WA, USA. Today is \(currentDate). The time is \(currentTime)."
 
-        guard FileManager.default.fileExists(atPath: Bot.modelFileURL.path) else {
+        guard FileManager.default.fileExists(atPath: model.localModelURL.path) else {
             fatalError("Model file not found. Please download it first.")
         }
 
-//        self.init(from: Bot.modelFileURL, template: .OLMoE(systemPrompt))
-        self.init(from: Bot.modelFileURL, template: .OLMoE())
+        let maxTokenCount: Int32 = model.isMultimodal ? 8192 : 2048
+        super.init(
+            from: model.localModelURL.path,
+            stopSequence: model.template.stopSequence,
+            maxTokenCount: maxTokenCount
+        )
+        self.template = model.template
     }
 }
 
@@ -48,12 +57,19 @@ struct BotView: View {
     @FocusState private var isTextEditorFocused: Bool
     @Binding var showMetrics: Bool
     let disclaimerHandlers: DisclaimerHandlers
+    let onBack: () -> Void
 
     // Add new state for text sharing
     @State private var showTextShareSheet = false
+    @State private var selectedPhotoItem: PhotosPickerItem?
+    @State private var selectedImage: UIImage?
+    @State private var selectedFiles: [FileAttachment] = []
+    @State private var showFileImporter = false
+    @State private var showCamera = false
+    @State private var attachmentErrorMessage: String?
 
     private var hasValidInput: Bool {
-        !input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        !input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || selectedImage != nil || !selectedFiles.isEmpty
     }
 
     private var isInputDisabled: Bool {
@@ -68,10 +84,24 @@ struct BotView: View {
         bot.history.isEmpty && !isGenerating && bot.output.isEmpty
     }
 
-    init(_ bot: Bot, showMetrics: Binding<Bool>, disclaimerHandlers: DisclaimerHandlers) {
+    private var isMtmdAvailable: Bool {
+        MTMDRuntime.isAvailable
+    }
+
+    private var projectorExists: Bool {
+        guard bot.modelSpec.isMultimodal else { return true }
+        return bot.modelSpec.localProjectorURL?.exists ?? false
+    }
+
+    private var attachmentsEnabled: Bool {
+        isMtmdAvailable && bot.modelSpec.isMultimodal && projectorExists
+    }
+
+    init(_ bot: Bot, showMetrics: Binding<Bool>, disclaimerHandlers: DisclaimerHandlers, onBack: @escaping () -> Void) {
         _bot = StateObject(wrappedValue: bot)
         _showMetrics = showMetrics
         self.disclaimerHandlers = disclaimerHandlers
+        self.onBack = onBack
     }
 
     func shouldShowScrollButton() -> Bool {
@@ -86,13 +116,46 @@ struct BotView: View {
             isTextEditorFocused = false
         #endif
         stopSubmitted = false
-        let originalInput = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        var originalInput = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        if originalInput.isEmpty {
+            if selectedImage != nil {
+                originalInput = "Describe the image."
+            } else if !selectedFiles.isEmpty {
+                originalInput = "Please review the attached files."
+            }
+        }
+        if !selectedFiles.isEmpty {
+            let fileList = selectedFiles.map { $0.name }.joined(separator: ", ")
+            originalInput += "\n\nAttached files: \(fileList)"
+        }
         input = "" // Clear the input after sending
 
         // Add the user message to history immediately
         bot.history.append(Chat(role: .user, content: originalInput))
         Task {
-            await bot.respond(to: originalInput)
+            if let image = selectedImage {
+                guard attachmentsEnabled else {
+                    await MainActor.run {
+                        if !bot.modelSpec.isMultimodal {
+                            attachmentErrorMessage = "Selected model does not support images."
+                        } else if !isMtmdAvailable {
+                            attachmentErrorMessage = "Vision runtime not available (mtmd not linked)."
+                        } else {
+                            attachmentErrorMessage = "Projector file (mmproj) missing for this model."
+                        }
+                        isGenerating = false
+                    }
+                    return
+                }
+                await bot.respond(to: originalInput, image: image, projectorURL: bot.modelSpec.localProjectorURL)
+                await MainActor.run {
+                    selectedImage = nil
+                    selectedFiles.removeAll()
+                }
+            } else {
+                await bot.respond(to: originalInput)
+                await MainActor.run { selectedFiles.removeAll() }
+            }
             await MainActor.run {
                 bot.setOutput(to: "")
                 isGenerating = false
@@ -106,7 +169,7 @@ struct BotView: View {
 
     func stop() {
         self.stopSubmitted = true
-        bot.stop()
+        Task { await bot.stop() }
     }
 
     func deleteHistory() {
@@ -157,7 +220,7 @@ struct BotView: View {
                 let apiKey = Configuration.apiKey
                 let apiUrl = Configuration.apiUrl
 
-                let modelName = AppConstants.Model.filename
+                let modelName = bot.modelSpec.filename
                 let systemFingerprint = "\(modelName)-\(AppInfo.shared.appId)"
 
                 let messages = bot.history.map { chat in
@@ -272,6 +335,22 @@ struct BotView: View {
                 .edgesIgnoringSafeArea(.all)
 
             VStack(alignment: .leading) {
+                HStack(spacing: 12) {
+                    Button(action: onBack) {
+                        Image(systemName: "chevron.left")
+                            .foregroundColor(Color("TextColor"))
+                            .padding(8)
+                            .background(Color("Surface"))
+                            .clipShape(Circle())
+                    }
+                    Text(bot.modelSpec.displayName)
+                        .font(.headline)
+                        .foregroundColor(Color("TextColor"))
+                    Spacer()
+                }
+                .padding(.horizontal)
+                .padding(.top, 8)
+
                 if !isChatEmpty {
                     ScrollViewReader { proxy in
                         ZStack {
@@ -327,16 +406,119 @@ struct BotView: View {
                     .padding(.bottom, 15)
                 }
 
-                MessageInputView(
-                    input: $input,
-                    isGenerating: $isGenerating,
-                    stopSubmitted: $stopSubmitted,
-                    isTextEditorFocused: $isTextEditorFocused,
-                    isInputDisabled: isInputDisabled,
-                    hasValidInput: hasValidInput,
-                    respond: respond,
-                    stop: stop
-                )
+                if !isTextEditorFocused {
+                    if let image = selectedImage {
+                        HStack(spacing: 12) {
+                            Image(uiImage: image)
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: 72, height: 72)
+                                .clipped()
+                                .cornerRadius(12)
+                            Text("Image attached")
+                                .foregroundColor(Color("TextColor"))
+                            Spacer()
+                            Button("Remove") {
+                                selectedImage = nil
+                            }
+                            .buttonStyle(.SecondaryButton)
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.bottom, 8)
+                    }
+                    if !selectedFiles.isEmpty {
+                        VStack(spacing: 8) {
+                            ForEach(selectedFiles) { file in
+                                HStack(spacing: 12) {
+                                    Image(systemName: file.iconName)
+                                        .foregroundColor(Color("LightGreen"))
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(file.name)
+                                            .foregroundColor(Color("TextColor"))
+                                        Text(file.detailText)
+                                            .font(.caption)
+                                            .foregroundColor(Color("TextColor").opacity(0.6))
+                                    }
+                                    Spacer()
+                                    Button("Remove") {
+                                        selectedFiles.removeAll { $0.id == file.id }
+                                    }
+                                    .buttonStyle(.SecondaryButton)
+                                }
+                                .padding(10)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .fill(Color("Surface"))
+                                )
+                            }
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.bottom, 8)
+                    }
+                }
+
+                HStack(alignment: .bottom, spacing: 12) {
+                    if !isTextEditorFocused {
+                        HStack(spacing: 8) {
+                            PhotosPicker(selection: $selectedPhotoItem, matching: .images, photoLibrary: .shared()) {
+                                Image(systemName: "paperclip")
+                                    .font(.system(size: 18, weight: .medium))
+                                    .foregroundColor(attachmentsEnabled ? Color("LightGreen") : Color("TextColor").opacity(0.4))
+                                    .padding(12)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 16)
+                                            .fill(Color("Surface"))
+                                    )
+                            }
+                            .disabled(!attachmentsEnabled)
+                            .onChange(of: selectedPhotoItem) { _, newItem in
+                                handlePhotoSelection(newItem)
+                            }
+
+                            Button {
+                                guard UIImagePickerController.isSourceTypeAvailable(.camera) else {
+                                    attachmentErrorMessage = "Camera is not available on this device."
+                                    return
+                                }
+                                showCamera = true
+                            } label: {
+                                Image(systemName: "camera")
+                                    .font(.system(size: 18, weight: .medium))
+                                    .foregroundColor(attachmentsEnabled ? Color("LightGreen") : Color("TextColor").opacity(0.4))
+                                    .padding(12)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 16)
+                                            .fill(Color("Surface"))
+                                    )
+                            }
+                            .disabled(!attachmentsEnabled)
+
+                            Button {
+                                showFileImporter = true
+                            } label: {
+                                Image(systemName: "doc")
+                                    .font(.system(size: 18, weight: .medium))
+                                    .foregroundColor(Color("LightGreen"))
+                                    .padding(12)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 16)
+                                            .fill(Color("Surface"))
+                                    )
+                            }
+                        }
+                    }
+
+                    MessageInputView(
+                        input: $input,
+                        isGenerating: $isGenerating,
+                        stopSubmitted: $stopSubmitted,
+                        isTextEditorFocused: $isTextEditorFocused,
+                        isInputDisabled: isInputDisabled,
+                        hasValidInput: hasValidInput,
+                        respond: respond,
+                        stop: stop
+                    )
+                }
             }
             .padding(12)
         }
@@ -347,6 +529,35 @@ struct BotView: View {
         }
         .sheet(isPresented: $showTextShareSheet) {
             ActivityViewController(activityItems: [formatConversationForSharing()])
+        }
+        .sheet(isPresented: $showCamera) {
+            CameraPicker(image: $selectedImage)
+        }
+        .fileImporter(
+            isPresented: $showFileImporter,
+            allowedContentTypes: [
+                .pdf,
+                .plainText,
+                .rtf,
+                .json,
+                .xml,
+                .commaSeparatedText,
+                .data
+            ],
+            allowsMultipleSelection: true
+        ) { result in
+            handleFileImport(result)
+        }
+        .alert("Attachment Error", isPresented: Binding(get: {
+            attachmentErrorMessage != nil
+        }, set: { newValue in
+            if !newValue { attachmentErrorMessage = nil }
+        })) {
+            Button("OK", role: .cancel) {
+                attachmentErrorMessage = nil
+            }
+        } message: {
+            Text(attachmentErrorMessage ?? "")
         }
         .gesture(TapGesture().onEnded({
             isTextEditorFocused = false
@@ -364,6 +575,123 @@ struct BotView: View {
                     newChatButton()
                 }
             }
+        }
+    }
+
+    private func handlePhotoSelection(_ item: PhotosPickerItem?) {
+        guard let item else { return }
+        Task {
+            if let data = try? await item.loadTransferable(type: Data.self),
+               let image = UIImage(data: data) {
+                await MainActor.run {
+                    selectedImage = image
+                }
+            }
+        }
+    }
+
+    private func handleFileImport(_ result: Result<[URL], Error>) {
+        switch result {
+        case .success(let urls):
+            let newFiles = urls.compactMap { url in
+                storeAttachment(from: url)
+            }
+            selectedFiles.append(contentsOf: newFiles)
+        case .failure(let error):
+            attachmentErrorMessage = "Failed to import file: \(error.localizedDescription)"
+        }
+    }
+
+    private func storeAttachment(from url: URL) -> FileAttachment? {
+        let accessGranted = url.startAccessingSecurityScopedResource()
+        defer {
+            if accessGranted {
+                url.stopAccessingSecurityScopedResource()
+            }
+        }
+
+        let fileName = url.lastPathComponent
+        let destinationFolder = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Attachments", isDirectory: true)
+        let destinationURL = destinationFolder.appendingPathComponent(fileName)
+
+        do {
+            try FileManager.default.createDirectory(at: destinationFolder, withIntermediateDirectories: true)
+            if FileManager.default.fileExists(atPath: destinationURL.path) {
+                try FileManager.default.removeItem(at: destinationURL)
+            }
+            try FileManager.default.copyItem(at: url, to: destinationURL)
+            let attributes = try FileManager.default.attributesOfItem(atPath: destinationURL.path)
+            let size = (attributes[.size] as? NSNumber)?.int64Value ?? 0
+            return FileAttachment(
+                url: destinationURL,
+                name: fileName,
+                size: size,
+                typeIdentifier: UTType(filenameExtension: destinationURL.pathExtension)?.identifier
+            )
+        } catch {
+            attachmentErrorMessage = "Failed to save file: \(error.localizedDescription)"
+            return nil
+        }
+    }
+}
+
+private struct FileAttachment: Identifiable, Equatable {
+    let id = UUID()
+    let url: URL
+    let name: String
+    let size: Int64
+    let typeIdentifier: String?
+
+    var iconName: String {
+        if let typeIdentifier, UTType(typeIdentifier)?.conforms(to: .pdf) == true {
+            return "doc.richtext"
+        }
+        if let typeIdentifier, UTType(typeIdentifier)?.conforms(to: .text) == true {
+            return "doc.plaintext"
+        }
+        return "doc"
+    }
+
+    var detailText: String {
+        let sizeText = ByteCountFormatter.string(fromByteCount: size, countStyle: .file)
+        return sizeText
+    }
+}
+
+private struct CameraPicker: UIViewControllerRepresentable {
+    @Binding var image: UIImage?
+    typealias UIViewControllerType = UIImagePickerController
+
+    func makeUIViewController(context: UIViewControllerRepresentableContext<CameraPicker>) -> UIImagePickerController {
+        let picker = UIImagePickerController()
+        picker.sourceType = .camera
+        picker.delegate = context.coordinator
+        return picker
+    }
+
+    func updateUIViewController(_ uiViewController: UIImagePickerController, context: UIViewControllerRepresentableContext<CameraPicker>) {}
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(image: $image)
+    }
+
+    final class Coordinator: NSObject, UINavigationControllerDelegate, UIImagePickerControllerDelegate {
+        @Binding var image: UIImage?
+
+        init(image: Binding<UIImage?>) {
+            _image = image
+        }
+
+        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
+            if let selectedImage = info[.originalImage] as? UIImage {
+                image = selectedImage
+            }
+            picker.dismiss(animated: true)
+        }
+
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            picker.dismiss(animated: true)
         }
     }
 }
@@ -392,6 +720,7 @@ struct ActivityViewController: UIViewControllerRepresentable {
 struct ContentView: View {
     /// A shared instance of the background download manager.
     @StateObject private var downloadManager = BackgroundDownloadManager.shared
+    @StateObject private var modelStore = ModelStore.shared
 
     /// The state of the disclaimer handling.
     @StateObject private var disclaimerState = DisclaimerState()
@@ -410,6 +739,7 @@ struct ContentView: View {
 
     /// A flag indicating whether to show metrics.
     @State private var showMetrics: Bool = false
+    @State private var showModelList: Bool = true
 
     /// Logger for tracking events in the ContentView.
     let logger = Logger(subsystem: "com.allenai.olmoe", category: "ContentView")
@@ -426,37 +756,78 @@ struct ContentView: View {
                                 useMockedModelResponse = true
                             }
                         )
-                    } else if downloadManager.isModelReady, let bot = bot {
-                        BotView(bot,
-                               showMetrics: $showMetrics,
-                               disclaimerHandlers: DisclaimerHandlers(
+                    } else if showModelList {
+                        ModelDownloadView(onSelectModel: { _ in
+                            showModelList = false
+                            checkModelAndInitializeBot()
+                        })
+                    } else if modelStore.isReady(modelStore.selectedModel), let activeBot = bot {
+                        BotView(
+                            activeBot,
+                            showMetrics: $showMetrics,
+                            disclaimerHandlers: DisclaimerHandlers(
                             setActiveDisclaimer: { self.disclaimerState.activeDisclaimer = $0 },
                             setAllowOutsideTapDismiss: { self.disclaimerState.allowOutsideTapDismiss = $0 },
                             setCancelAction: { self.disclaimerState.onCancel = $0 },
                             setConfirmAction: { self.disclaimerState.onConfirm = $0 },
                             setShowDisclaimerPage: { self.disclaimerState.showDisclaimerPage = $0 }
-                        ))
+                            ),
+                            onBack: {
+                                showModelList = true
+                                self.bot = nil
+                            }
+                        )
                     } else {
-                        ModelDownloadView()
+                        ModelDownloadView(onSelectModel: { _ in
+                            showModelList = false
+                            checkModelAndInitializeBot()
+                        })
                     }
                 }
-                .onChange(of: downloadManager.isModelReady) { newValue in
-                    if newValue && bot == nil {
-                        initializeBot()
-                    }
-                }
-                .onAppear {
+                .onChange(of: modelStore.selectedModelID) { _, _ in
                     checkModelAndInitializeBot()
                 }
+                .onChange(of: downloadManager.isDownloading) { _, _ in
+                    checkModelAndInitializeBot()
+                }
+                .onAppear { checkModelAndInitializeBot() }
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     AppToolbar(
                         leadingContent: {
-                            HStack(alignment: .bottom, spacing: 20) {
-                                // Info button
+                            HStack(alignment: .bottom, spacing: 16) {
+                                if !showModelList, bot != nil {
+                                    ToolbarButton(
+                                        action: {
+                                            showModelList = true
+                                            bot = nil
+                                        },
+                                        systemName: "chevron.left",
+                                        foregroundColor: Color("TextColor")
+                                    )
+
+                                    Menu {
+                                        ForEach(modelStore.models.filter { modelStore.isReady($0) }) { model in
+                                            Button(model.displayName) {
+                                                modelStore.selectModel(model)
+                                                showModelList = false
+                                                checkModelAndInitializeBot()
+                                            }
+                                        }
+                                    } label: {
+                                        HStack(spacing: 6) {
+                                            Text(modelStore.selectedModel.displayName)
+                                                .font(.caption)
+                                                .foregroundColor(Color("TextColor"))
+                                            Image(systemName: "chevron.down")
+                                                .font(.caption2)
+                                                .foregroundColor(Color("TextColor"))
+                                        }
+                                    }
+                                }
+
                                 InfoButton(action: { showInfoPage = true })
 
-                                // Metrics toggle button - now using the MetricsButton component
                                 MetricsButton(
                                     action: { showMetrics.toggle() },
                                     isShowing: showMetrics
@@ -468,6 +839,11 @@ struct ContentView: View {
             }
             .onAppear {
                 disclaimerState.showInitialDisclaimer()
+            }
+            .onChange(of: disclaimerState.showDisclaimerPage) { _, newValue in
+                if !newValue {
+                    showModelList = true
+                }
             }
             .sheet(isPresented: $showInfoPage) {
                 SheetWrapper {
@@ -504,21 +880,17 @@ struct ContentView: View {
 
     /// Checks if the model exists before initializing the bot
     private func checkModelAndInitializeBot() {
-        if FileManager.default.fileExists(atPath: Bot.modelFileURL.path) {
-            downloadManager.isModelReady = true
+        let model = modelStore.selectedModel
+        if modelStore.isReady(model) {
             initializeBot()
         } else {
-            downloadManager.isModelReady = false
+            bot = nil
         }
     }
 
     /// Initializes the bot instance and sets the loopback test response flag.
     private func initializeBot() {
-        do {
-            bot = try Bot()
-            bot?.loopBackTestResponse = useMockedModelResponse
-        } catch {
-            print("Error initializing bot: \(error)")
-        }
+        bot = Bot(model: modelStore.selectedModel)
+        bot?.loopBackTestResponse = useMockedModelResponse
     }
 }

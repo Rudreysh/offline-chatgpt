@@ -1,5 +1,5 @@
 {
-  "originHash" : "5d8fca4b8d9382d8493e5796120f9a305be43e78ddd8c00d20ec219872db9a1b",
+  "originHash" : "2952565d50a9eb740b64af431a67f59f261c844162a465a25d1e55f681c3f42f",
   "pins" : [
     {
       "identity" : "highlightswift",
@@ -8,14 +8,6 @@
       "state" : {
         "revision" : "784ca3ccfc8a2cf724fbb2f06cb6ec3329424da3",
         "version" : "1.1.0"
-      }
-    },
-    {
-      "identity" : "llama.cpp",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/ggerganov/llama.cpp/",
-      "state" : {
-        "revision" : "cc98896db858df7aa40d0e16a505883ef196a482"
       }
     },
     {

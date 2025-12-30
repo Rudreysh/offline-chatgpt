@@ -1,0 +1,73 @@
+client:
+  name: basic
+  file-system: device-agnostic
+tools: {}
+targets:
+  "PackageStructure": ["<PackageStructure>"]
+  "llamaPackageTests-arm64-apple-macosx26.0-debug.module": ["<llamaPackageTests-arm64-apple-macosx26.0-debug.module>"]
+  "llamaTests-arm64-apple-macosx26.0-debug.module": ["<llamaTests-arm64-apple-macosx26.0-debug.module>"]
+  "llama_mtmd-arm64-apple-macosx26.0-debug.module": ["<llama_mtmd-arm64-apple-macosx26.0-debug.module>"]
+  "main": []
+  "test": ["<llamaTests-arm64-apple-macosx26.0-debug.module>"]
+default: "main"
+nodes:
+  "/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/Frameworks/llama.xcframework/":
+    is-directory-structure: true
+    content-exclusion-patterns: [".git",".build"]
+  "/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/Sources/llama_mtmd/":
+    is-directory-structure: true
+    content-exclusion-patterns: [".git",".build"]
+  "/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/Tests/llamaTests/":
+    is-directory-structure: true
+    content-exclusion-patterns: [".git",".build"]
+commands:
+  "/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/.build/index-build/arm64-apple-macosx/debug/llamaPackageTests.build/sources":
+    tool: write-auxiliary-file
+    inputs: ["<sources-file-list>","/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/.build/index-build/arm64-apple-macosx/debug/llamaPackageTests.derived/runner.swift"]
+    outputs: ["/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/.build/index-build/arm64-apple-macosx/debug/llamaPackageTests.build/sources"]
+    description: "Write auxiliary file /Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/.build/index-build/arm64-apple-macosx/debug/llamaPackageTests.build/sources"
+
+  "/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/.build/index-build/arm64-apple-macosx/debug/llamaTests.build/sources":
+    tool: write-auxiliary-file
+    inputs: ["<sources-file-list>","/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/Tests/llamaTests/llamaTests.swift"]
+    outputs: ["/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/.build/index-build/arm64-apple-macosx/debug/llamaTests.build/sources"]
+    description: "Write auxiliary file /Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/.build/index-build/arm64-apple-macosx/debug/llamaTests.build/sources"
+
+  "/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/.build/index-build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt":
+    tool: write-auxiliary-file
+    inputs: ["<swift-get-version>","/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"]
+    outputs: ["/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/.build/index-build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"]
+    always-out-of-date: "true"
+    description: "Write auxiliary file /Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/.build/index-build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+
+  "<llamaPackageTests-arm64-apple-macosx26.0-debug.module>":
+    tool: phony
+    inputs: ["/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/.build/index-build/arm64-apple-macosx/debug/Modules/llamaPackageTests.swiftmodule"]
+    outputs: ["<llamaPackageTests-arm64-apple-macosx26.0-debug.module>"]
+
+  "<llamaTests-arm64-apple-macosx26.0-debug.module>":
+    tool: phony
+    inputs: ["/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/.build/index-build/arm64-apple-macosx/debug/Modules/llamaTests.swiftmodule"]
+    outputs: ["<llamaTests-arm64-apple-macosx26.0-debug.module>"]
+
+  "C.llamaPackageTests-arm64-apple-macosx26.0-debug.module":
+    tool: shell
+    inputs: ["/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/.build/index-build/arm64-apple-macosx/debug/llamaPackageTests.derived/runner.swift","/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/.build/index-build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt","/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/.build/index-build/arm64-apple-macosx/debug/Modules/llamaTests.swiftmodule","/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/.build/index-build/arm64-apple-macosx/debug/llama.framework/","/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/.build/index-build/arm64-apple-macosx/debug/llamaPackageTests.build/sources"]
+    outputs: ["/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/.build/index-build/arm64-apple-macosx/debug/Modules/llamaPackageTests.swiftmodule"]
+    description: "Compiling Swift Module 'llamaPackageTests' (1 sources)"
+    args: ["/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc","-module-name","llamaPackageTests","-emit-dependencies","-emit-module","-emit-module-path","/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/.build/index-build/arm64-apple-macosx/debug/Modules/llamaPackageTests.swiftmodule","-output-file-map","/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/.build/index-build/arm64-apple-macosx/debug/llamaPackageTests.build/output-file-map.json","-parse-as-library","-incremental","@/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/.build/index-build/arm64-apple-macosx/debug/llamaPackageTests.build/sources","-I","/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/.build/index-build/arm64-apple-macosx/debug/Modules","-target","arm64-apple-macosx10.13","-incremental","-enable-batch-mode","-serialize-diagnostics","-Onone","-enable-testing","-Xfrontend","-enable-cross-import-overlays","-j14","-DSWIFT_PACKAGE","-DDEBUG","-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE","-I","/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/Frameworks/llama.xcframework/macos-arm64_x86_64","-Xcc","-I","-Xcc","/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/Frameworks/llama.xcframework/macos-arm64_x86_64","-module-cache-path","/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/.build/index-build/arm64-apple-macosx/debug/ModuleCache","-parseable-output","-parse-as-library","-F","/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/.build/index-build/arm64-apple-macosx/debug","-emit-objc-header","-emit-objc-header-path","/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/.build/index-build/arm64-apple-macosx/debug/llamaPackageTests.build/include/llamaPackageTests-Swift.h","-Xfrontend","-experimental-lazy-typecheck","-Xfrontend","-experimental-skip-all-function-bodies","-Xfrontend","-experimental-allow-module-with-compiler-errors","-Xfrontend","-empty-abi-descriptor","-plugin-path","/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing","-sdk","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk","-F","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-F","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks","-I","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-L","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-g","-Xcc","-isysroot","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk","-Xcc","-F","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-Xcc","-F","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks","-Xcc","-fPIC","-Xcc","-g","-package-name","llama_spm"]
+
+  "C.llamaTests-arm64-apple-macosx26.0-debug.module":
+    tool: shell
+    inputs: ["/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/Tests/llamaTests/llamaTests.swift","/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/.build/index-build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt","/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/.build/index-build/arm64-apple-macosx/debug/llama.framework/","/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/.build/index-build/arm64-apple-macosx/debug/llamaTests.build/sources"]
+    outputs: ["/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/.build/index-build/arm64-apple-macosx/debug/Modules/llamaTests.swiftmodule"]
+    description: "Compiling Swift Module 'llamaTests' (1 sources)"
+    args: ["/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc","-module-name","llamaTests","-emit-dependencies","-emit-module","-emit-module-path","/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/.build/index-build/arm64-apple-macosx/debug/Modules/llamaTests.swiftmodule","-output-file-map","/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/.build/index-build/arm64-apple-macosx/debug/llamaTests.build/output-file-map.json","-parse-as-library","-incremental","@/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/.build/index-build/arm64-apple-macosx/debug/llamaTests.build/sources","-I","/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/.build/index-build/arm64-apple-macosx/debug/Modules","-target","arm64-apple-macosx14.0","-incremental","-enable-batch-mode","-serialize-diagnostics","-Onone","-enable-testing","-Xfrontend","-enable-cross-import-overlays","-j14","-DSWIFT_PACKAGE","-DDEBUG","-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE","-I","/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/Frameworks/llama.xcframework/macos-arm64_x86_64","-Xcc","-I","-Xcc","/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/Frameworks/llama.xcframework/macos-arm64_x86_64","-module-cache-path","/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/.build/index-build/arm64-apple-macosx/debug/ModuleCache","-parseable-output","-parse-as-library","-F","/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/.build/index-build/arm64-apple-macosx/debug","-swift-version","5","-Xfrontend","-experimental-lazy-typecheck","-Xfrontend","-experimental-skip-all-function-bodies","-Xfrontend","-experimental-allow-module-with-compiler-errors","-Xfrontend","-empty-abi-descriptor","-plugin-path","/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing","-sdk","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk","-F","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-F","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks","-I","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-L","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-g","-Xcc","-isysroot","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk","-Xcc","-F","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-Xcc","-F","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks","-Xcc","-fPIC","-Xcc","-g","-package-name","llama_spm"]
+
+  "PackageStructure":
+    tool: package-structure-tool
+    inputs: ["/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/Frameworks/llama.xcframework/","/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/Sources/llama_mtmd/","/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/Tests/llamaTests/","/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/Package.swift","/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/Package.resolved"]
+    outputs: ["<PackageStructure>"]
+    description: "Planning build"
+    allow-missing-inputs: true
+

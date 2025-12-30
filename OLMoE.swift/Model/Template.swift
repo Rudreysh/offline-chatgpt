@@ -93,8 +93,11 @@ public struct Template {
                         processed += "\(bot.prefix)\(chat.content)\(bot.suffix)"
                     }
                 }
-                // Add the current user input
-                processed += "\(user.prefix)\(input)\(user.suffix)"
+                // Add the current user input only if it wasn't already appended to history.
+                let lastUser = history.last { $0.role == .user }
+                if lastUser?.content != input {
+                    processed += "\(user.prefix)\(input)\(user.suffix)"
+                }
                 // Handle bot prefix for the new response
                 if shouldDropLast {
                     processed += bot.prefix.dropLast()

@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		9B7A1A012E000001 /* ModelCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B7A1A002E000001 /* ModelCatalog.swift */; };
+		9B7A1A032E000001 /* ModelStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B7A1A022E000001 /* ModelStore.swift */; };
+		9B7A1A052E000001 /* MTMD.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B7A1A042E000001 /* MTMD.swift */; };
 		48779B152D80A17200C446E8 /* HighlightSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 48779B142D80A17200C446E8 /* HighlightSwift */; };
 		4885754D2D77756600F7A36F /* InferenceMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4885754C2D77756300F7A36F /* InferenceMetrics.swift */; };
 		48952DF02D4D69D400476373 /* MarkdownUI in Frameworks */ = {isa = PBXBuildFile; productRef = 48952DEF2D4D69D400476373 /* MarkdownUI */; };
@@ -15,10 +18,10 @@
 		48B806352CF54D9F00E1CC0A /* LambdaResponseModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48B806342CF54D9600E1CC0A /* LambdaResponseModel.swift */; };
 		48E37C202D0271610030C57C /* KeyboardResponder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48E37C1F2D02715B0030C57C /* KeyboardResponder.swift */; };
 		58A7F8BC2D4C16F20041AA70 /* LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = 58A7F8BB2D4C16F20041AA70 /* LICENSE */; };
+		967E81862F02F5EA0060F3D8 /* llama in Frameworks */ = {isa = PBXBuildFile; productRef = 967E81852F02F5EA0060F3D8 /* llama */; };
 		A0117FEC2C990EAB00035007 /* OLMoE_swiftApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0117FEB2C990EAB00035007 /* OLMoE_swiftApp.swift */; };
 		A0117FF02C990EAC00035007 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A0117FEF2C990EAC00035007 /* Assets.xcassets */; };
 		A0117FF42C990EAC00035007 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A0117FF32C990EAC00035007 /* Preview Assets.xcassets */; };
-		A0117FFF2C990F5600035007 /* llama in Frameworks */ = {isa = PBXBuildFile; productRef = A0117FFE2C990F5600035007 /* llama */; };
 		A01180012C990F7600035007 /* LLM.swift in Sources */ = {isa = PBXBuildFile; fileRef = A01180002C990F7600035007 /* LLM.swift */; };
 		A046603D2CA3FAFA007BD14C /* Configuration.swift in Sources */ = {isa = PBXBuildFile; fileRef = A046603C2CA3FAFA007BD14C /* Configuration.swift */; };
 		A046603F2CA400D2007BD14C /* AppInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = A046603E2CA400D2007BD14C /* AppInfo.swift */; };
@@ -32,6 +35,9 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		9B7A1A002E000001 /* ModelCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelCatalog.swift; sourceTree = "<group>"; };
+		9B7A1A022E000001 /* ModelStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelStore.swift; sourceTree = "<group>"; };
+		9B7A1A042E000001 /* MTMD.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MTMD.swift; sourceTree = "<group>"; };
 		48194C372D14D7C500E76532 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		4877E8992D7A4DB200C446E8 /* OLMoE_swift_macCatalyst.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = OLMoE_swift_macCatalyst.entitlements; sourceTree = "<group>"; };
 		4885754C2D77756300F7A36F /* InferenceMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InferenceMetrics.swift; sourceTree = "<group>"; };
@@ -74,8 +80,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				967E81862F02F5EA0060F3D8 /* llama in Frameworks */,
 				48779B152D80A17200C446E8 /* HighlightSwift in Frameworks */,
-				A0117FFF2C990F5600035007 /* llama in Frameworks */,
 				48952DF02D4D69D400476373 /* MarkdownUI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -137,6 +143,9 @@
 		B26FDB402CEAD47700E1D57C /* Model */ = {
 			isa = PBXGroup;
 			children = (
+				9B7A1A002E000001 /* ModelCatalog.swift */,
+				9B7A1A022E000001 /* ModelStore.swift */,
+				9B7A1A042E000001 /* MTMD.swift */,
 				4885754C2D77756300F7A36F /* InferenceMetrics.swift */,
 				48E37C1F2D02715B0030C57C /* KeyboardResponder.swift */,
 				48B806342CF54D9600E1CC0A /* LambdaResponseModel.swift */,
@@ -178,9 +187,9 @@
 			);
 			name = OLMoE.swift;
 			packageProductDependencies = (
-				A0117FFE2C990F5600035007 /* llama */,
 				48952DEF2D4D69D400476373 /* MarkdownUI */,
 				48779B142D80A17200C446E8 /* HighlightSwift */,
+				967E81852F02F5EA0060F3D8 /* llama */,
 			);
 			productName = OLMoE.swift;
 			productReference = A0117FE82C990EAB00035007 /* OLMoE.swift.app */;
@@ -214,9 +223,9 @@
 			);
 			mainGroup = A0117FDF2C990EAB00035007;
 			packageReferences = (
-				A0117FFD2C990F5600035007 /* XCRemoteSwiftPackageReference "llama" */,
 				48952DEE2D4D69D400476373 /* XCRemoteSwiftPackageReference "swift-markdown-ui" */,
 				48779B132D80A17200C446E8 /* XCRemoteSwiftPackageReference "HighlightSwift" */,
+				967E81842F02F5EA0060F3D8 /* XCLocalSwiftPackageReference "llama-spm" */,
 			);
 			productRefGroup = A0117FE92C990EAB00035007 /* Products */;
 			projectDirPath = "";
@@ -246,6 +255,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9B7A1A012E000001 /* ModelCatalog.swift in Sources */,
+				9B7A1A032E000001 /* ModelStore.swift in Sources */,
+				9B7A1A052E000001 /* MTMD.swift in Sources */,
 				489FD75C2CF13E4E0011E908 /* AttestManager.swift in Sources */,
 				B26FDB4C2CEAD53700E1D57C /* HuggingFaceError.swift in Sources */,
 				B26FDB522CEAD54C00E1D57C /* Role.swift in Sources */,
@@ -513,6 +525,13 @@
 		};
 /* End XCConfigurationList section */
 
+/* Begin XCLocalSwiftPackageReference section */
+		967E81842F02F5EA0060F3D8 /* XCLocalSwiftPackageReference "llama-spm" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = "llama-spm";
+		};
+/* End XCLocalSwiftPackageReference section */
+
 /* Begin XCRemoteSwiftPackageReference section */
 		48779B132D80A17200C446E8 /* XCRemoteSwiftPackageReference "HighlightSwift" */ = {
 			isa = XCRemoteSwiftPackageReference;
@@ -530,14 +549,6 @@
 				minimumVersion = 2.4.1;
 			};
 		};
-		A0117FFD2C990F5600035007 /* XCRemoteSwiftPackageReference "llama" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/ggerganov/llama.cpp/";
-			requirement = {
-				kind = revision;
-				revision = cc98896db858df7aa40d0e16a505883ef196a482;
-			};
-		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -551,9 +562,8 @@
 			package = 48952DEE2D4D69D400476373 /* XCRemoteSwiftPackageReference "swift-markdown-ui" */;
 			productName = MarkdownUI;
 		};
-		A0117FFE2C990F5600035007 /* llama */ = {
+		967E81852F02F5EA0060F3D8 /* llama */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = A0117FFD2C990F5600035007 /* XCRemoteSwiftPackageReference "llama" */;
 			productName = llama;
 		};
 /* End XCSwiftPackageProductDependency section */

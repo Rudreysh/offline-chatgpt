@@ -1,0 +1,12 @@
+{
+  "": {
+    "swift-dependencies": "/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/.build/index-build/arm64-apple-macosx/debug/llama.build/master.swiftdeps"
+  },
+  "/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/Sources/llama/llama.swift": {
+    "dependencies": "/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/.build/index-build/arm64-apple-macosx/debug/llama.build/llama.d",
+    "object": "/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/.build/index-build/arm64-apple-macosx/debug/llama.build/llama.swift.o",
+    "swiftmodule": "/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/.build/index-build/arm64-apple-macosx/debug/llama.build/llama~partial.swiftmodule",
+    "swift-dependencies": "/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/.build/index-build/arm64-apple-macosx/debug/llama.build/llama.swiftdeps",
+    "diagnostics": "/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/.build/index-build/arm64-apple-macosx/debug/llama.build/llama.dia"
+  }
+}

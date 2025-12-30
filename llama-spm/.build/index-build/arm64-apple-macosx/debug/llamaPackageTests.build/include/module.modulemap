@@ -1,0 +1,3 @@
+module llamaPackageTests {
+    header "/Users/rukesh/Documents/olmo_projects/OLMoE.swift/llama-spm/.build/index-build/arm64-apple-macosx/debug/llamaPackageTests.build/include/llamaPackageTests-Swift.h"
+}
