@@ -43,6 +43,19 @@ final class ModelStore: ObservableObject {
         models = ModelCatalog.models + customModels
     }
 
+    func isCustom(_ model: ModelSpec) -> Bool {
+        customModels.contains(where: { $0.id == model.id })
+    }
+
+    func removeCustomModel(_ model: ModelSpec) {
+        customModels.removeAll(where: { $0.id == model.id })
+        persistCustomModels()
+        models = ModelCatalog.models + customModels
+        if selectedModelID == model.id {
+            selectedModelID = models.first?.id ?? "olmoe-latest"
+        }
+    }
+
     private func persistCustomModels() {
         let payload = customModels.map { CustomModel(from: $0) }
         guard let data = try? JSONEncoder().encode(payload) else { return }

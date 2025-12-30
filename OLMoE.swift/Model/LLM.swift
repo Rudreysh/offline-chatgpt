@@ -117,6 +117,22 @@ open class LLM: ObservableObject {
     private var mtmdContext: mtmd_context?
     private var mtmdProjectorPath: String?
 
+    public static func validateModel(at path: String) -> String? {
+        guard FileManager.default.fileExists(atPath: path) else {
+            return "Model file not found. Please download it again."
+        }
+        let cPath = path.cString(using: .utf8)!
+        var modelParams = llama_model_default_params()
+        #if targetEnvironment(simulator)
+            modelParams.n_gpu_layers = 0
+        #endif
+        guard let model = llama_model_load_from_file(cPath, modelParams) else {
+            return "Failed to load model. The file may be a projector (mmproj) or incompatible. Please delete and re-download."
+        }
+        llama_model_free(model)
+        return nil
+    }
+
     public init(
         from path: String,
         stopSequence: String? = nil,

@@ -82,7 +82,27 @@ enum ModelCatalog {
             id: "openelm-1-1b-instruct-q8",
             displayName: "OpenELM 1.1B Instruct",
             filename: "OpenELM-1_1B-Instruct-Q8_0.gguf",
-            downloadURL: URL(string: "https://huggingface.co/bartowski/OpenELM-1_1B-Instruct-GGUF/resolve/main/OpenELM-1_1B-Instruct-Q8_0.gguf")!,
+            downloadURL: URL(string: "https://huggingface.co/mradermacher/OpenELM-1_1B-Instruct-GGUF/resolve/main/OpenELM-1_1B-Instruct.Q8_0.gguf?download=true")!,
+            template: .chatML(),
+            isMultimodal: false,
+            projectorFilename: nil,
+            projectorURL: nil
+        ),
+        ModelSpec(
+            id: "openelm-270m-instruct-f16",
+            displayName: "OpenELM 270M Instruct (F16)",
+            filename: "OpenELM-270M-Instruct.f16.gguf",
+            downloadURL: URL(string: "https://huggingface.co/mradermacher/OpenELM-270M-Instruct-GGUF/resolve/main/OpenELM-270M-Instruct.f16.gguf?download=true")!,
+            template: .chatML(),
+            isMultimodal: false,
+            projectorFilename: nil,
+            projectorURL: nil
+        ),
+        ModelSpec(
+            id: "lfm2-350m-q8",
+            displayName: "LFM2 350M (Q8_0)",
+            filename: "LFM2-350M-Q8_0.gguf",
+            downloadURL: URL(string: "https://huggingface.co/LiquidAI/LFM2-350M-GGUF/resolve/main/LFM2-350M-Q8_0.gguf?download=true")!,
             template: .chatML(),
             isMultimodal: false,
             projectorFilename: nil,
@@ -107,6 +127,26 @@ enum ModelCatalog {
             isMultimodal: true,
             projectorFilename: "mmproj-Qwen2-VL-2B-Instruct-Q8_0.gguf",
             projectorURL: URL(string: "https://huggingface.co/ggml-org/Qwen2-VL-2B-Instruct-GGUF/resolve/main/mmproj-Qwen2-VL-2B-Instruct-Q8_0.gguf?download=true")
+        ),
+        ModelSpec(
+            id: "qwen3vl-2b-q8",
+            displayName: "Qwen3-VL 2B (Vision, Q8_0)",
+            filename: "Qwen3VL-2B-Instruct-Q8_0.gguf",
+            downloadURL: URL(string: "https://huggingface.co/Qwen/Qwen3-VL-2B-Instruct-GGUF/resolve/main/Qwen3VL-2B-Instruct-Q8_0.gguf?download=true")!,
+            template: .chatML(),
+            isMultimodal: true,
+            projectorFilename: "mmproj-Qwen3VL-2B-Instruct-Q8_0.gguf",
+            projectorURL: URL(string: "https://huggingface.co/Qwen/Qwen3-VL-2B-Instruct-GGUF/resolve/main/mmproj-Qwen3VL-2B-Instruct-Q8_0.gguf?download=true")
+        ),
+        ModelSpec(
+            id: "ministral-3-3b-instruct-q2",
+            displayName: "Ministral 3 3B (Vision, Q2_K_L)",
+            filename: "Ministral-3-3B-Instruct-2512-Q2_K_L.gguf",
+            downloadURL: URL(string: "https://huggingface.co/unsloth/Ministral-3-3B-Instruct-2512-GGUF/resolve/main/Ministral-3-3B-Instruct-2512-Q2_K_L.gguf?download=true")!,
+            template: .chatML(),
+            isMultimodal: true,
+            projectorFilename: "mmproj-BF16.gguf",
+            projectorURL: URL(string: "https://huggingface.co/unsloth/Ministral-3-3B-Instruct-2512-GGUF/resolve/main/mmproj-BF16.gguf?download=true")
         ),
         ModelSpec(
             id: "llava-phi-3-mini-q8",

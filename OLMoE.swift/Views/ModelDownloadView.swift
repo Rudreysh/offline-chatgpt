@@ -240,6 +240,7 @@ struct ModelDownloadView: View {
     @StateObject private var modelStore = ModelStore.shared
     var onSelectModel: ((ModelSpec) -> Void)? = nil
     @State private var showCustomModelSheet = false
+    @State private var selectionError: String?
 
     public var body: some View {
         ZStack {
@@ -260,6 +261,7 @@ struct ModelDownloadView: View {
                     ForEach(modelStore.models) { model in
                         ModelRow(
                             model: model,
+                            isCustom: modelStore.isCustom(model),
                             isSelected: modelStore.selectedModelID == model.id,
                             isReady: modelStore.isReady(model),
                             isDownloading: downloadManager.isDownloading && downloadManager.currentModelID == model.id,
@@ -269,10 +271,17 @@ struct ModelDownloadView: View {
                                 modelStore.selectModel(model)
                                 if modelStore.isReady(model) {
                                     onSelectModel?(model)
+                                } else {
+                                    selectionError = "Please download the model before selecting it."
                                 }
                             },
                             onDownload: { downloadManager.startDownload(for: model) },
-                            onDelete: { downloadManager.flushModel(model) },
+                            onDelete: {
+                                downloadManager.flushModel(model)
+                                if modelStore.isCustom(model) {
+                                    modelStore.removeCustomModel(model)
+                                }
+                            },
                             onCancel: { downloadManager.cancelDownload() }
                         )
                     }
@@ -290,6 +299,17 @@ struct ModelDownloadView: View {
                     CustomModelSheet(isPresented: $showCustomModelSheet, modelStore: modelStore)
                 }
             }
+            .alert("Model Not Ready", isPresented: Binding(get: {
+                selectionError != nil
+            }, set: { newValue in
+                if !newValue { selectionError = nil }
+            })) {
+                Button("OK", role: .cancel) {
+                    selectionError = nil
+                }
+            } message: {
+                Text(selectionError ?? "")
+            }
 
             Ai2LogoView(applyMacCatalystPadding: true)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
@@ -299,6 +319,7 @@ struct ModelDownloadView: View {
 
 private struct ModelRow: View {
     let model: ModelSpec
+    let isCustom: Bool
     let isSelected: Bool
     let isReady: Bool
     let isDownloading: Bool
@@ -352,9 +373,17 @@ private struct ModelRow: View {
                 if isDownloading {
                     Button("Cancel", action: onCancel)
                         .buttonStyle(.SecondaryButton)
-                } else if isReady {
-                    Button("Delete", action: onDelete)
-                        .buttonStyle(.SecondaryButton)
+                } else if isReady || isCustom {
+                    Button(action: onDelete) {
+                        Image(systemName: "trash")
+                            .font(.caption)
+                            .foregroundColor(Color("TextColor"))
+                            .padding(10)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(Color("Surface"))
+                            )
+                    }
                 }
             }
 

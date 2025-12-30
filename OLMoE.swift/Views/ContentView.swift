@@ -329,27 +329,14 @@ struct BotView: View {
         }
     }
 
+    @ViewBuilder
     private func contentView(in geometry: GeometryProxy) -> some View {
         ZStack {
             Color("BackgroundColor")
                 .edgesIgnoringSafeArea(.all)
 
             VStack(alignment: .leading) {
-                HStack(spacing: 12) {
-                    Button(action: onBack) {
-                        Image(systemName: "chevron.left")
-                            .foregroundColor(Color("TextColor"))
-                            .padding(8)
-                            .background(Color("Surface"))
-                            .clipShape(Circle())
-                    }
-                    Text(bot.modelSpec.displayName)
-                        .font(.headline)
-                        .foregroundColor(Color("TextColor"))
-                    Spacer()
-                }
-                .padding(.horizontal)
-                .padding(.top, 8)
+                headerView()
 
                 if !isChatEmpty {
                     ScrollViewReader { proxy in
@@ -406,119 +393,9 @@ struct BotView: View {
                     .padding(.bottom, 15)
                 }
 
-                if !isTextEditorFocused {
-                    if let image = selectedImage {
-                        HStack(spacing: 12) {
-                            Image(uiImage: image)
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                                .frame(width: 72, height: 72)
-                                .clipped()
-                                .cornerRadius(12)
-                            Text("Image attached")
-                                .foregroundColor(Color("TextColor"))
-                            Spacer()
-                            Button("Remove") {
-                                selectedImage = nil
-                            }
-                            .buttonStyle(.SecondaryButton)
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.bottom, 8)
-                    }
-                    if !selectedFiles.isEmpty {
-                        VStack(spacing: 8) {
-                            ForEach(selectedFiles) { file in
-                                HStack(spacing: 12) {
-                                    Image(systemName: file.iconName)
-                                        .foregroundColor(Color("LightGreen"))
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text(file.name)
-                                            .foregroundColor(Color("TextColor"))
-                                        Text(file.detailText)
-                                            .font(.caption)
-                                            .foregroundColor(Color("TextColor").opacity(0.6))
-                                    }
-                                    Spacer()
-                                    Button("Remove") {
-                                        selectedFiles.removeAll { $0.id == file.id }
-                                    }
-                                    .buttonStyle(.SecondaryButton)
-                                }
-                                .padding(10)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .fill(Color("Surface"))
-                                )
-                            }
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.bottom, 8)
-                    }
-                }
+                attachmentsView()
 
-                HStack(alignment: .bottom, spacing: 12) {
-                    if !isTextEditorFocused {
-                        HStack(spacing: 8) {
-                            PhotosPicker(selection: $selectedPhotoItem, matching: .images, photoLibrary: .shared()) {
-                                Image(systemName: "paperclip")
-                                    .font(.system(size: 18, weight: .medium))
-                                    .foregroundColor(attachmentsEnabled ? Color("LightGreen") : Color("TextColor").opacity(0.4))
-                                    .padding(12)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 16)
-                                            .fill(Color("Surface"))
-                                    )
-                            }
-                            .disabled(!attachmentsEnabled)
-                            .onChange(of: selectedPhotoItem) { _, newItem in
-                                handlePhotoSelection(newItem)
-                            }
-
-                            Button {
-                                guard UIImagePickerController.isSourceTypeAvailable(.camera) else {
-                                    attachmentErrorMessage = "Camera is not available on this device."
-                                    return
-                                }
-                                showCamera = true
-                            } label: {
-                                Image(systemName: "camera")
-                                    .font(.system(size: 18, weight: .medium))
-                                    .foregroundColor(attachmentsEnabled ? Color("LightGreen") : Color("TextColor").opacity(0.4))
-                                    .padding(12)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 16)
-                                            .fill(Color("Surface"))
-                                    )
-                            }
-                            .disabled(!attachmentsEnabled)
-
-                            Button {
-                                showFileImporter = true
-                            } label: {
-                                Image(systemName: "doc")
-                                    .font(.system(size: 18, weight: .medium))
-                                    .foregroundColor(Color("LightGreen"))
-                                    .padding(12)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 16)
-                                            .fill(Color("Surface"))
-                                    )
-                            }
-                        }
-                    }
-
-                    MessageInputView(
-                        input: $input,
-                        isGenerating: $isGenerating,
-                        stopSubmitted: $stopSubmitted,
-                        isTextEditorFocused: $isTextEditorFocused,
-                        isInputDisabled: isInputDisabled,
-                        hasValidInput: hasValidInput,
-                        respond: respond,
-                        stop: stop
-                    )
-                }
+                inputBarView()
             }
             .padding(12)
         }
@@ -575,6 +452,143 @@ struct BotView: View {
                     newChatButton()
                 }
             }
+        }
+    }
+
+    private func headerView() -> some View {
+        HStack(spacing: 12) {
+            Button(action: onBack) {
+                Image(systemName: "chevron.left")
+                    .foregroundColor(Color("TextColor"))
+                    .padding(8)
+                    .background(Color("Surface"))
+                    .clipShape(Circle())
+            }
+            Text(bot.modelSpec.displayName)
+                .font(.headline)
+                .foregroundColor(Color("TextColor"))
+            Spacer()
+        }
+        .padding(.horizontal)
+        .padding(.top, 8)
+    }
+
+    @ViewBuilder
+    private func attachmentsView() -> some View {
+        if !isTextEditorFocused {
+            if let image = selectedImage {
+                HStack(spacing: 12) {
+                    Image(uiImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 72, height: 72)
+                        .clipped()
+                        .cornerRadius(12)
+                    Text("Image attached")
+                        .foregroundColor(Color("TextColor"))
+                    Spacer()
+                    Button("Remove") {
+                        selectedImage = nil
+                    }
+                    .buttonStyle(.SecondaryButton)
+                }
+                .padding(.horizontal, 12)
+                .padding(.bottom, 8)
+            }
+            if !selectedFiles.isEmpty {
+                VStack(spacing: 8) {
+                    ForEach(selectedFiles) { file in
+                        HStack(spacing: 12) {
+                            Image(systemName: file.iconName)
+                                .foregroundColor(Color("LightGreen"))
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(file.name)
+                                    .foregroundColor(Color("TextColor"))
+                                Text(file.detailText)
+                                    .font(.caption)
+                                    .foregroundColor(Color("TextColor").opacity(0.6))
+                            }
+                            Spacer()
+                            Button("Remove") {
+                                selectedFiles.removeAll { $0.id == file.id }
+                            }
+                            .buttonStyle(.SecondaryButton)
+                        }
+                        .padding(10)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color("Surface"))
+                        )
+                    }
+                }
+                .padding(.horizontal, 12)
+                .padding(.bottom, 8)
+            }
+        }
+    }
+
+    private func inputBarView() -> some View {
+        HStack(alignment: .bottom, spacing: 12) {
+            if !isTextEditorFocused {
+                HStack(spacing: 8) {
+                    PhotosPicker(selection: $selectedPhotoItem, matching: .images, photoLibrary: .shared()) {
+                        Image(systemName: "paperclip")
+                            .font(.system(size: 18, weight: .medium))
+                            .foregroundColor(attachmentsEnabled ? Color("LightGreen") : Color("TextColor").opacity(0.4))
+                            .padding(12)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .fill(Color("Surface"))
+                            )
+                    }
+                    .disabled(!attachmentsEnabled)
+                    .onChange(of: selectedPhotoItem) { _, newItem in
+                        handlePhotoSelection(newItem)
+                    }
+
+                    Button {
+                        guard UIImagePickerController.isSourceTypeAvailable(.camera) else {
+                            attachmentErrorMessage = "Camera is not available on this device."
+                            return
+                        }
+                        showCamera = true
+                    } label: {
+                        Image(systemName: "camera")
+                            .font(.system(size: 18, weight: .medium))
+                            .foregroundColor(attachmentsEnabled ? Color("LightGreen") : Color("TextColor").opacity(0.4))
+                            .padding(12)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .fill(Color("Surface"))
+                            )
+                    }
+                    .disabled(!attachmentsEnabled)
+
+                    Button {
+                        showFileImporter = true
+                    } label: {
+                        Image(systemName: "doc")
+                            .font(.system(size: 18, weight: .medium))
+                            .foregroundColor(Color("LightGreen"))
+                            .padding(12)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .fill(Color("Surface"))
+                            )
+                    }
+                }
+            }
+
+            MessageInputView(
+                input: $input,
+                isGenerating: $isGenerating,
+                stopSubmitted: $stopSubmitted,
+                isTextEditorFocused: $isTextEditorFocused,
+                isInputDisabled: isInputDisabled,
+                hasValidInput: hasValidInput,
+                respond: respond,
+                stop: stop
+            )
         }
     }
 
@@ -740,6 +754,7 @@ struct ContentView: View {
     /// A flag indicating whether to show metrics.
     @State private var showMetrics: Bool = false
     @State private var showModelList: Bool = true
+    @State private var modelLoadError: String?
 
     /// Logger for tracking events in the ContentView.
     let logger = Logger(subsystem: "com.allenai.olmoe", category: "ContentView")
@@ -789,14 +804,25 @@ struct ContentView: View {
                 }
                 .onChange(of: downloadManager.isDownloading) { _, _ in
                     checkModelAndInitializeBot()
+            }
+            .onAppear { checkModelAndInitializeBot() }
+            .navigationBarTitleDisplayMode(.inline)
+            .alert("Model Error", isPresented: Binding(get: {
+                modelLoadError != nil
+            }, set: { newValue in
+                if !newValue { modelLoadError = nil }
+            })) {
+                Button("OK", role: .cancel) {
+                    modelLoadError = nil
                 }
-                .onAppear { checkModelAndInitializeBot() }
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    AppToolbar(
-                        leadingContent: {
-                            HStack(alignment: .bottom, spacing: 16) {
-                                if !showModelList, bot != nil {
+            } message: {
+                Text(modelLoadError ?? "")
+            }
+            .toolbar {
+                AppToolbar(
+                    leadingContent: {
+                        HStack(alignment: .bottom, spacing: 16) {
+                            if !showModelList, bot != nil {
                                     ToolbarButton(
                                         action: {
                                             showModelList = true
@@ -890,7 +916,13 @@ struct ContentView: View {
 
     /// Initializes the bot instance and sets the loopback test response flag.
     private func initializeBot() {
-        bot = Bot(model: modelStore.selectedModel)
+        let model = modelStore.selectedModel
+        if let error = LLM.validateModel(at: model.localModelURL.path) {
+            modelLoadError = error
+            bot = nil
+            return
+        }
+        bot = Bot(model: model)
         bot?.loopBackTestResponse = useMockedModelResponse
     }
 }
